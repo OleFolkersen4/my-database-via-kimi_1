@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Manager - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+        .status-online {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online .status-dot {
+            background: #16a34a;
+        }
+
+        .status-offline .status-dot {
+            background: #dc2626;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card .label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 0.25rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.625rem 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: var(--card);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 0.75rem;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: var(--bg);
+        }
+
+        th {
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tbody tr {
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover {
+            background: rgba(37, 99, 235, 0.03);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-aktiv { background: #dcfce7; color: #166534; }
+        .badge-inaktiv { background: #fee2e2; color: #991b1b; }
+        .badge-venter { background: #fef3c7; color: #92400e; }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .actions .btn {
+            padding: 0.375rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            transform: translateX(150%);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--primary); }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--border) 25%, #f1f5f9 50%, var(--border) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+            height: 20px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            header h1 { font-size: 1.75rem; }
+            .card-header { flex-direction: column; align-items: stretch; }
+            .search-bar { max-width: none; }
+            .form-grid { grid-template-columns: 1fr; }
+            th, td { padding: 0.75rem 0.5rem; font-size: 0.85rem; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗄️ Database Manager</h1>
+            <p>Supabase PostgreSQL - Live data i skyen</p>
+            <div class="connection-status status-loading" id="connectionStatus">
+                <span class="status-dot"></span>
+                Forbinder til Supabase...
+            </div>
+        </header>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="label">Total poster</div>
+                <div class="value" id="totalCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Aktive</div>
+                <div class="value" id="activeCount" style="color: var(--success);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Inaktive</div>
+                <div class="value" id="inactiveCount" style="color: var(--danger);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Status</div>
+                <div class="value" style="font-size: 1rem; color: var(--text-muted); margin-top: 0.75rem;" id="dbStatus">Forbinder...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">➕ Opret ny post</div>
+            </div>
+            <div class="card-body">
+                <form id="createForm" class="form-grid">
+                    <div class="form-group">
+                        <label for="navn">Navn *</label>
+                        <input type="text" id="navn" required placeholder="F.eks. Anders Hansen">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" required placeholder="anders@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefon">Telefon</label>
+                        <input type="tel" id="telefon" placeholder="+45 12 34 56 78">
+                    </div>
+                    <div class="form-group">
+                        <label for="kategori">Kategori</label>
+                        <select id="kategori">
+                            <option value="Kunde">Kunde</option>
+                            <option value="Leverandør">Leverandør</option>
+                            <option value="Medarbejder">Medarbejder</option>
+                            <option value="Partner">Partner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select id="status">
+                            <option value="Aktiv">Aktiv</option>
+                            <option value="Inaktiv">Inaktiv</option>
+                            <option value="Venter">Venter</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="noter">Noter</label>
+                        <textarea id="noter" placeholder="Valgfrie noter..."></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <span>💾</span> Gem post
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📋 Dataoversigt</div>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Søg efter navn, email, telefon...">
+                    <button class="btn btn-secondary" onclick="clearSearch()">Ryd</button>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Navn</th>
+                                <th>Email</th>
+                                <th>Telefon</th>
+                                <th>Kategori</th>
+                                <th>Status</th>
+                                <th>Oprettet</th>
+                                <th style="width: 100px;">Handlinger</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable">
+                            <tr><td colspan="8" class="empty-state"><div class="skeleton" style="width: 100%; height: 40px;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">✏️ Rediger post</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editNavn">Navn *</label>
+                            <input type="text" id="editNavn" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmail">Email *</label>
+                            <input type="email" id="editEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editTelefon">Telefon</label>
+                            <input type="tel" id="editTelefon">
+                        </div>
+                        <div class="form-group">
+                            <label for="editKategori">Kategori</label>
+                            <select id="editKategori">
+                                <option value="Kunde">Kunde</option>
+                                <option value="Leverandør">Leverandør</option>
+                                <option value="Medarbejder">Medarbejder</option>
+                                <option value="Partner">Partner</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editStatus">Status</label>
+                            <select id="editStatus">
+                                <option value="Aktiv">Aktiv</option>
+                                <option value="Inaktiv">Inaktiv</option>
+                                <option value="Venter">Venter</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="editNoter">Noter</label>
+                            <textarea id="editNoter"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuller</button>
+                    <button type="submit" class="btn btn-primary">Gem ændringer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title">🗑️ Bekræft sletning</div>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Er du sikker på, at du vil slette denne post? Denne handling kan ikke fortrydes.</p>
+                <p style="margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-weight: 600;" id="deleteItemName"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Annuller</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Slet permanent</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // DIN SUPABASE KONFIGURATION
+        // ═══════════════════════════════════════════════════════════════
+        const SUPABASE_URL = 'https://zdcfyqggvjpcfossnbld.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_q3I6LNTwkMMPhsOY3TATPA_1g8lzH6d';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allData = [];
+        let deleteId = null;
+
+        // ═══════════════════════════════════════════════════════════════
+        // FORBINDELSE & DATA
+        // ═══════════════════════════════════════════════════════════════
+
+        async function initApp() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('kontakter')
+                    .select('count', { count: 'exact', head: true });
+
+                if (error) throw error;
+
+                updateConnectionStatus(true);
+                await loadData();
+            } catch (err) {
+                console.error('Forbindelsesfejl:', err);
+                updateConnectionStatus(false, err.message);
+            }
+        }
+
+        function updateConnectionStatus(connected, errorMsg = '') {
+            const statusEl = document.getElementById('connectionStatus');
+            const dbStatusEl = document.getElementById('dbStatus');
+
+            if (connected) {
+                statusEl.className = 'connection-status status-online';
+                statusEl.innerHTML = '<span class="status-dot"></span> Forbundet til Supabase';
+                dbStatusEl.textContent = 'Online';
+                dbStatusEl.style.color = 'var(--success)';
+            } else {
+                statusEl.className = 'connection-status status-offline';
+                statusEl.innerHTML = `<span class="status-dot"></span> Forbindelsesfejl`;
+                dbStatusEl.textContent = 'Offline';
+                dbStatusEl.style.color = 'var(--danger)';
+                console.error('Detaljer:', errorMsg);
+            }
+        }
+
+        async function loadData() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('kontakter')
+                    .select('*')
+                    .order('oprettet', { ascending: false });
+
+                if (error) throw error;
+
+                allData = data || [];
+                renderTable();
+                updateStats();
+            } catch (err) {
+                showToast('Fejl ved indlæsning: ' + err.message, 'error');
+            }
+        }
+
+        function updateStats() {
+            const total = allData.length;
+            const active = allData.filter(r => r.status === 'Aktiv').length;
+            const inactive = allData.filter(r => r.status === 'Inaktiv').length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('activeCount').textContent = active;
+            document.getElementById('inactiveCount').textContent = inactive;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // VISNING
+        // ═══════════════════════════════════════════════════════════════
+
+        function getStatusBadge(status) {
+            const classes = { 'Aktiv': 'badge-aktiv', 'Inaktiv': 'badge-inaktiv', 'Venter': 'badge-venter' };
+            return `<span class="badge ${classes[status] || ''}">${status}</span>`;
+        }
+
+        function renderTable(searchTerm = '') {
+            const tbody = document.getElementById('dataTable');
+            let filtered = allData;
+
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filtered = allData.filter(row =>
+                    (row.navn || '').toLowerCase().includes(term) ||
+                    (row.email || '').toLowerCase().includes(term) ||
+                    (row.telefon || '').toLowerCase().includes(term) ||
+                    (row.kategori || '').toLowerCase().includes(term) ||
+                    (row.noter || '').toLowerCase().includes(term)
+                );
+            }
+
+            if (!filtered.length) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>${searchTerm ? 'Ingen resultater fundet' : 'Ingen data endnu'}</p>
+                    </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(row => {
+                const date = row.oprettet 
+                    ? new Date(row.oprettet).toLocaleDateString('da-DK') 
+                    : '-';
+                return `
+                    <tr>
+                        <td>#${row.id}</td>
+                        <td><strong>${escapeHtml(row.navn)}</strong></td>
+                        <td>${escapeHtml(row.email)}</td>
+                        <td>${escapeHtml(row.telefon || '-')}</td>
+                        <td>${escapeHtml(row.kategori)}</td>
+                        <td>${getStatusBadge(row.status)}</td>
+                        <td>${date}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-secondary btn-sm" onclick="editItem(${row.id})" title="Rediger">✏️</button>
+                                <button class="btn btn-danger btn-sm" onclick="confirmDelete(${row.id}, '${escapeHtml(row.navn)}')" title="Slet">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // CRUD OPERATIONER
+        // ═══════════════════════════════════════════════════════════════
+
+        // CREATE
+        document.getElementById('createForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Gemmer...';
+
+            const newRow = {
+                navn: document.getElementById('navn').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                telefon: document.getElementById('telefon').value.trim() || null,
+                kategori: document.getElementById('kategori').value,
+                status: document.getElementById('status').value,
+                noter: document.getElementById('noter').value.trim() || null
+            };
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('kontakter')
+                    .insert([newRow])
+                    .select();
+
+                if (error) throw error;
+
+                allData.unshift(data[0]);
+                renderTable(document.getElementById('searchInput').value);
+                updateStats();
+                this.reset();
+                showToast('Post oprettet i Supabase!', 'success');
+            } catch (err) {
+                showToast('Fejl: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>💾</span> Gem post';
+            }
+        });
+
+        // EDIT
+        async function editItem(id) {
+            const row = allData.find(r => r.id === id);
+            if (!row) return;
+
+            document.getElementById('editId').value = row.id;
+            document.getElementById('editNavn').value = row.navn;
+            document.getElementById('editEmail').value = row.email;
+            document.getElementById('editTelefon').value = row.telefon || '';
+            document.getElementById('editKategori').value = row.kategori;
+            document.getElementById('editStatus').value = row.status;
+            document.getElementById('editNoter').value = row.noter || '';
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editId').value);
+
+            const updates = {
+                navn: document.getElementById('editNavn').value.trim(),
+                email: document.getElementById('editEmail').value.trim(),
+                telefon: document.getElementById('editTelefon').value.trim() || null,
+                kategori: document.getElementById('editKategori').value,
+                status: document.getElementById('editStatus').value,
+                noter: document.getElementById('editNoter').value.trim() || null
+            };
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('kontakter')
+                    .update(updates)
+                    .eq('id', id)
+                    .select();
+
+                if (error) throw error;
+
+                const idx = allData.findIndex(r => r.id === id);
+                if (idx !== -1) allData[idx] = data[0];
+
+                renderTable(document.getElementById('searchInput').value);
+                updateStats();
+                closeModal();
+                showToast('Post opdateret i Supabase!', 'success');
+            } catch (err) {
+                showToast('Fejl: ' + err.message, 'error');
+            }
+        });
+
+        // DELETE
+        function confirmDelete(id, navn) {
+            deleteId = id;
+            document.getElementById('deleteItemName').textContent = navn;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+            if (!deleteId) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('kontakter')
+                    .delete()
+                    .eq('id', deleteId);
+
+                if (error) throw error;
+
+                allData = allData.filter(r => r.id !== deleteId);
+                renderTable(document.getElementById('searchInput').value);
+                updateStats();
+                closeDeleteModal();
+                showToast('Post slettet fra Supabase!', 'error');
+            } catch (err) {
+                showToast('Fejl: ' + err.message, 'error');
+            }
+            deleteId = null;
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // HJÆLPEFUNKTIONER
+        // ═══════════════════════════════════════════════════════════════
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            deleteId = null;
+        }
+
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => renderTable(e.target.value), 300);
+        });
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            renderTable();
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        // Start
+        initApp();
+    </script>
+</body>
+</html>
